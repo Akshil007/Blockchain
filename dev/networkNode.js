@@ -60,32 +60,98 @@ app.post('/transaction', function (req, res){
 
 });
 
+/*
+	This end points does series of task.
+	1) It mines new block using proof-of-concept.
+	2) Once the block is mined , it distributes new block to other nodes
+	3) then it creats new reward transaction for miner and distribute it over the network to reside in
+	pending transaction. 
 
+*/
 
 app.get('/mine', function (req, res){	
 
 	const lastBlock = bitCoin.getLastBlock();
-	const previosBlockHash = lastBlock['hash'];
+	const previousBlockHash = lastBlock['hash'];
 
 	const currBlockData = {
 		transactions : bitCoin.pendingTransactions,
 		index : lastBlock['index'] + 1
 	};
-	const nonce = bitCoin.proofOfWork(previosBlockHash , currBlockData);
-	const hash = bitCoin.hashBlock(previosBlockHash , currBlockData ,nonce);
+	const nonce = bitCoin.proofOfWork(previousBlockHash , currBlockData);
+	const hash = bitCoin.hashBlock(previousBlockHash , currBlockData ,nonce);
 
 	bitCoin.createNewTransaction(6.5, "00" ,nodeAddress);
-	console.log(nodeAddress);
+	//console.log(nodeAddress);
 
-	const block = bitCoin.createNewBlock(nonce, previosBlockHash ,hash);
+	const block = bitCoin.createNewBlock(nonce, previousBlockHash ,hash);
 
-	res.json({
-		"note" :"new block successfully mined",
+	const requestPromises=[];
+
+	bitCoin.networkNodes.forEach( networkNodeUrl => {
+		const requestOptions={
+			uri: networkNodeUrl + "/receive-new-block",
+			method: "POST",
+			body:{ "newBlock":block},
+			json:true
+		};
+		requestPromises.push(rp(requestOptions));
+	})
+
+	Promise.all(requestPromises)
+	.then(data =>{
+		const requestOptions = {
+			uri : bitCoin.currNodeUrl + "/transaction/broadcast",
+			method:"POST",
+			body:{
+				"amount" : 12.5,
+				"sender" : "00",
+				"recipient" : nodeAddress
+			},
+			json: true
+		};
+		return rp(requestOptions);
+	})
+	.then(data =>{
+		res.json({
+		"note" :"new block mined and broadcasted successfully",
 		"block" : block
+		});
 	});
+});
 
+
+
+//this end point receives requests from mine end point to add new valid block
+//into blockchain of that node 
+app.post('/receive-new-block',function(req,res){
+	const newBlock = req.body.newBlock;
+	const lastBlock = bitCoin.getLastBlock();
+	const correctHash = newBlock.previousBlockHash === lastBlock.hash;
+	const correctIndex = newBlock['index'] === lastBlock['index'] + 1;
+
+	if(correctIndex && correctHash)
+	{
+		bitCoin.chain.push(newBlock);
+		bitCoin.pendingTransactions = [];
+		res.json({
+			note:"new Block received and added successfully",
+			block: newBlock
+		});
+	}
+	else
+	{
+		res.json({
+			note:"new Block rejected",
+			block: newBlock
+		});
+	}
 
 });
+
+
+
+
 
 /*
 	1. when new node or request comes to any exisiting node in the network. It will request for 
@@ -160,6 +226,56 @@ app.post('/register-node-bulk',function(req,res){
 		if( nodeNotAlreadyPresent && notCurrentNode ) bitCoin.networkNodes.push(networkNodeUrl); 
 	});
 	res.json({"note":"Bulk registration successfull."});
+});
+
+
+//implements longest chain rule (considers longest chain as a valid chain)
+app.get('/consensus',function(req,res){
+	const requestPromises = [];
+	bitCoin.networkNodes.forEach(networkNodeUrl=>{
+		const requestOptions ={
+			uri: networkNodeUrl + "/blockchain",
+			method: "GET",
+			json: true
+		};
+
+		requestPromises.push(rp(requestOptions));
+	});
+
+	Promise.all(requestPromises)
+	.then( blockchains=> {
+		const currChainLength = bitCoin.chain.length;
+		let maxChainLength = currChainLength;
+		let newLongestChain = null;
+		let newPendingTransactions = null;
+
+		blockchains.forEach(blockchain=>{
+			if(blockchain.chain.length > maxChainLength)
+			{
+				maxChainLength = blockchain.chain.length;
+				newLongestChain = blockchain.chain;
+				newPendingTransactions = blockchain.pendingTransactions; 
+			}
+		});
+
+		if( !newLongestChain || (newLongestChain && !bitCoin.chainIsValid(newLongestChain)))
+		{
+			res.json({
+				note:"Current chain has not been replaced",
+				chian: bitCoin.chain
+			});
+		}
+		else if( newLongestChain && bitCoin.chainIsValid(newLongestChain))
+		{
+			bitCoin.chain = newLongestChain;
+			bitCoin.pendingTransactions = newPendingTransactions;
+			res.json({
+				note:"Current chain has been replaced",
+				chian: bitCoin.chain
+			});
+
+		}
+	})
 });
 
 

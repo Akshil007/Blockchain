@@ -16,15 +16,15 @@ function blockchain()
 	this.createNewBlock(100,'0','0');
 }
 
-blockchain.prototype.createNewBlock=function(nonce, previosBlockHash, Hash){
+blockchain.prototype.createNewBlock=function(nonce, previousBlockHash, Hash){
 
 	const newBlock={
 		index : this.chain.length+1,
 		timeStamp : Date.now(),
-		tansactions : this.pendingTransactions,
+		transactions : this.pendingTransactions,
 		nonce : nonce,
 		hash : Hash,
-		previosBlockHash : previosBlockHash,
+		previousBlockHash : previousBlockHash,
 
 	};
 
@@ -80,6 +80,37 @@ blockchain.prototype.proofOfWork = function(previousBlockHash, currBlockData)
 	}
 
 	return nonce;
+}
+
+//checks integrity of blockchain 
+blockchain.prototype.chainIsValid = function(blockchain)
+{
+	let validChain = true;
+	for(let i=1 ; i<blockchain.length ; i++)
+	{
+		const currBlock = blockchain[i];
+		const previousBlock = blockchain[i-1];
+		const isHashValid = currBlock['previousBlockHash'] === previousBlock['hash'];
+		const isDataVaid = currBlock['hash'] === this.hashBlock(previousBlock['hash'], { transactions: currBlock['transactions'], index: currBlock['index']}, currBlock['nonce']);
+		if( !isDataVaid || !isHashValid){ 
+			console.log(blockchain[i]);
+			validChain=false
+		};
+	};
+
+	const genesisBlock = blockchain[0];
+	const correctPreviousBlockHash = genesisBlock['previousBlockHash'] === '0';
+	const correctNonce = genesisBlock['nonce'] === 100;
+	const correctHash = genesisBlock['hash'] === '0';
+	const correctTransaction = genesisBlock['transactions'].length === 0;
+
+	if(!correctTransaction || !correctHash || !correctNonce || !correctPreviousBlockHash){
+		console.log(genesisBlock);
+		validChain = false;
+	}
+	
+
+	return validChain;
 }
 
 module.exports = blockchain;
