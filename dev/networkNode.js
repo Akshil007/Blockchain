@@ -81,7 +81,7 @@ app.get('/mine', function (req, res){
 	const nonce = bitCoin.proofOfWork(previousBlockHash , currBlockData);
 	const hash = bitCoin.hashBlock(previousBlockHash , currBlockData ,nonce);
 
-	bitCoin.createNewTransaction(6.5, "00" ,nodeAddress);
+	bitCoin.createNewTransaction(6.25, "00" ,nodeAddress);
 	//console.log(nodeAddress);
 
 	const block = bitCoin.createNewBlock(nonce, previousBlockHash ,hash);
@@ -104,7 +104,7 @@ app.get('/mine', function (req, res){
 			uri : bitCoin.currNodeUrl + "/transaction/broadcast",
 			method:"POST",
 			body:{
-				"amount" : 12.5,
+				"amount" : 6.25,
 				"sender" : "00",
 				"recipient" : nodeAddress
 			},
@@ -276,6 +276,54 @@ app.get('/consensus',function(req,res){
 
 		}
 	})
+});
+
+
+
+//this will return block for perticular block hash
+app.get('/block/:blockhash', function(req,res){
+	let blockHash = req.params.blockhash; 
+	/*
+		: will assign value given in url to blockhash variable
+		 and we can use them using "req.params".
+		 like: localhost:3001/block/24j2g34j23gjh4234dfsf
+		 blockhash = 24j2g34j23gjh4234dfsf
+	*/
+	const correctBlock = bitCoin.getBlock(blockHash);
+	res.json({
+		block: correctBlock
+	});
+	
+
+
+});
+
+
+
+//this will return transaction for transactionId
+app.get('/transaction/:transactionId', function(req,res){
+
+	const transactionId = req.params.transactionId;
+	const transactionData = bitCoin.getTransaction(transactionId);
+	res.json({
+		Transaction: transactionData.transaction,
+		block: transactionData.block
+	});
+});
+
+
+//this will return all the transaction and curr balance of this address
+app.get('/address/:address', function(req,res){
+	const address = req.params.address;
+	const addressData = bitCoin.getAddressData(address);
+	res.json({
+		addressData : addressData
+	});
+});
+
+
+app.get('/block-explorer/index.html', function(req,res){
+	res.sendFile('./block-explorer/index.html',{root: __dirname});
 });
 
 

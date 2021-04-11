@@ -20,7 +20,7 @@ blockchain.prototype.createNewBlock=function(nonce, previousBlockHash, Hash){
 
 	const newBlock={
 		index : this.chain.length+1,
-		timeStamp : Date.now(),
+		timeStamp : new Date(),//Date.now(), //The static Date.now() method returns the number of milliseconds elapsed since January 1, 1970
 		transactions : this.pendingTransactions,
 		nonce : nonce,
 		hash : Hash,
@@ -112,5 +112,62 @@ blockchain.prototype.chainIsValid = function(blockchain)
 
 	return validChain;
 }
+
+//searches through entire blockchain to search block for giver blockhash
+blockchain.prototype.getBlock=function(blockHash){
+	let correctBlock = null;
+	this.chain.forEach(block=>{
+		if(block.hash === blockHash)
+		{
+			correctBlock = block;
+		}
+	});
+	return correctBlock;
+};
+
+
+//searches entire blockchain for searching perticular transaction
+blockchain.prototype.getTransaction=function(transactionId){
+	let correctBlock = null;
+	let correctTransaction = null;
+	this.chain.forEach(block=>{
+		block.transactions.forEach(transaction=>{
+			if(transaction.transactionId === transactionId)
+			{
+				correctBlock = block;
+				correctTransaction = transaction;
+			}
+		});
+	});
+	return {
+		block : correctBlock,
+		transaction : correctTransaction
+	};
+};
+
+//this will collect all transactions done by given address and also calculate balance of that address
+blockchain.prototype.getAddressData = function(address){
+	const addressTransactions =[];
+	this.chain.forEach(block =>{
+		block.transactions.forEach(transaction =>{
+			if(transaction.sender === address || transaction.recipient === address)
+				addressTransactions.push(transaction);
+		});
+	});
+
+	let balance = 0;
+	addressTransactions.forEach(transaction=>{
+		if(address === transaction.sender)
+			balance -= transaction.amount;
+		else if(address === transaction.recipient)
+			balance += transaction.amount;
+	});
+
+	return{
+		addressTransactions : addressTransactions,
+		addressBalance : balance
+	};
+}
+
 
 module.exports = blockchain;
