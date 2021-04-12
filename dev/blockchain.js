@@ -1,15 +1,20 @@
 //sha 256 for hashing
 const sha256=require('sha256'); 
 const {v4 : uuidv4} = require('uuid');
-const currNodeUrl = process.argv[3];
+
+const currNodeUrl = "http://"+process.argv[3]+":3001";
+
 
 function blockchain()
 {
+	
 	this.chain=[];
 	this.pendingTransactions=[];
-	
 	this.currNodeUrl=currNodeUrl;
+	console.log(this.currNodeUrl);
 	this.networkNodes = [];
+
+
 
 	//first block of blockchain is known as genesis block. it does not have previous hash
 	//and thats why does not have its own hash

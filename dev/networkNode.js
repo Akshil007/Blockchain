@@ -7,6 +7,7 @@ const rp = require('request-promise');
 const {v4 : uuidv4} = require('uuid');
 const nodeAddress = uuidv4().split('-').join("");
 
+
 const port = process.argv[2];
 
 
@@ -167,6 +168,10 @@ app.post('/register-and-broadcast-node',function(req,res){
 	const newNodeUrl = req.body.newNodeUrl;
 	
 	//register new node with the currnode
+	/*
+		if(bitCoin.currNodeUrl == null)
+			bitCoin.currNodeUrl = newNodeUrl
+	*/
 	if(bitCoin.currNodeUrl!==newNodeUrl && bitCoin.networkNodes.indexOf(newNodeUrl) == -1)bitCoin.networkNodes.push(newNodeUrl);
 
 
