@@ -4,7 +4,6 @@ const {v4 : uuidv4} = require('uuid');
 
 const currNodeUrl = "http://"+process.argv[3]+":3001";
 
-
 function blockchain()
 {
 	
