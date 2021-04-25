@@ -8,7 +8,7 @@ function blockchain()
 {
 	
 	this.chain=[];
-	this.pendingTransactions=[];
+	this.pendingRecords=[];
 	this.currNodeUrl=currNodeUrl;
 	console.log(this.currNodeUrl);
 	this.networkNodes = [];
@@ -25,14 +25,14 @@ blockchain.prototype.createNewBlock=function(nonce, previousBlockHash, Hash){
 	const newBlock={
 		index : this.chain.length+1,
 		timeStamp : new Date(),//Date.now(), //The static Date.now() method returns the number of milliseconds elapsed since January 1, 1970
-		transactions : this.pendingTransactions,
+		records : this.pendingRecords,
 		nonce : nonce,
 		hash : Hash,
 		previousBlockHash : previousBlockHash,
 
 	};
 
-	this.pendingTransactions = [];
+	this.pendingRecords = [];
 	this.chain.push(newBlock);
 
 	return newBlock;
@@ -42,22 +42,22 @@ blockchain.prototype.getLastBlock=function(){
 	return this.chain[this.chain.length-1];
 }
 
-blockchain.prototype.createNewTransaction =function(amount,sender,recipient)
+blockchain.prototype.createNewRecord =function(amount,sender,recipient)
 {
-	const newTransaction = {
+	const newRecord = {
 		amount : amount,
 		sender : sender,
 		recipient : recipient,
-		transactionId : uuidv4().split("-").join("")
+		RecordId : uuidv4().split("-").join("")
 	}
 
-	return newTransaction;
+	return newRecord;
 }
 
 
-blockchain.prototype.addTransactionToPendingTransaction = function(transactionObj)
+blockchain.prototype.addRecordToPendingRecord = function(RecordObj)
 {
-	this.pendingTransactions.push(transactionObj);
+	this.pendingRecords.push(RecordObj);
 	return this.getLastBlock()['index']+1;
 }
 
@@ -95,7 +95,7 @@ blockchain.prototype.chainIsValid = function(blockchain)
 		const currBlock = blockchain[i];
 		const previousBlock = blockchain[i-1];
 		const isHashValid = currBlock['previousBlockHash'] === previousBlock['hash'];
-		const isDataVaid = currBlock['hash'] === this.hashBlock(previousBlock['hash'], { transactions: currBlock['transactions'], index: currBlock['index']}, currBlock['nonce']);
+		const isDataVaid = currBlock['hash'] === this.hashBlock(previousBlock['hash'], { Records: currBlock['Records'], index: currBlock['index']}, currBlock['nonce']);
 		if( !isDataVaid || !isHashValid){ 
 			console.log(blockchain[i]);
 			validChain=false
@@ -106,9 +106,9 @@ blockchain.prototype.chainIsValid = function(blockchain)
 	const correctPreviousBlockHash = genesisBlock['previousBlockHash'] === '0';
 	const correctNonce = genesisBlock['nonce'] === 100;
 	const correctHash = genesisBlock['hash'] === '0';
-	const correctTransaction = genesisBlock['transactions'].length === 0;
+	const correctRecord = genesisBlock['Records'].length === 0;
 
-	if(!correctTransaction || !correctHash || !correctNonce || !correctPreviousBlockHash){
+	if(!correctRecord || !correctHash || !correctNonce || !correctPreviousBlockHash){
 		console.log(genesisBlock);
 		validChain = false;
 	}
@@ -130,45 +130,45 @@ blockchain.prototype.getBlock=function(blockHash){
 };
 
 
-//searches entire blockchain for searching perticular transaction
-blockchain.prototype.getTransaction=function(transactionId){
+//searches entire blockchain for searching perticular Record
+blockchain.prototype.getRecord=function(RecordId){
 	let correctBlock = null;
-	let correctTransaction = null;
+	let correctRecord = null;
 	this.chain.forEach(block=>{
-		block.transactions.forEach(transaction=>{
-			if(transaction.transactionId === transactionId)
+		block.Records.forEach(Record=>{
+			if(Record.RecordId === RecordId)
 			{
 				correctBlock = block;
-				correctTransaction = transaction;
+				correctRecord = Record;
 			}
 		});
 	});
 	return {
 		block : correctBlock,
-		transaction : correctTransaction
+		Record : correctRecord
 	};
 };
 
-//this will collect all transactions done by given address and also calculate balance of that address
+//this will collect all Records done by given address and also calculate balance of that address
 blockchain.prototype.getAddressData = function(address){
-	const addressTransactions =[];
+	const addressRecords =[];
 	this.chain.forEach(block =>{
-		block.transactions.forEach(transaction =>{
-			if(transaction.sender === address || transaction.recipient === address)
-				addressTransactions.push(transaction);
+		block.Records.forEach(Record =>{
+			if(Record.sender === address || Record.recipient === address)
+				addressRecords.push(Record);
 		});
 	});
 
 	let balance = 0;
-	addressTransactions.forEach(transaction=>{
-		if(address === transaction.sender)
-			balance -= transaction.amount;
-		else if(address === transaction.recipient)
-			balance += transaction.amount;
+	addressRecords.forEach(Record=>{
+		if(address === Record.sender)
+			balance -= Record.amount;
+		else if(address === Record.recipient)
+			balance += Record.amount;
 	});
 
 	return{
-		addressTransactions : addressTransactions,
+		addressRecords : addressRecords,
 		addressBalance : balance
 	};
 }
