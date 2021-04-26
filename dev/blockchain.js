@@ -1,8 +1,8 @@
 //sha 256 for hashing
 const sha256=require('sha256'); 
 const {v4 : uuidv4} = require('uuid');
-
-const currNodeUrl = "http://"+process.argv[3]+":3001";
+const port = process.argv[2];
+const currNodeUrl = "http://"+process.argv[3]+":"+port;
 
 function blockchain()
 {
@@ -42,12 +42,13 @@ blockchain.prototype.getLastBlock=function(){
 	return this.chain[this.chain.length-1];
 }
 
-blockchain.prototype.createNewRecord =function(amount,sender,recipient)
+blockchain.prototype.createNewRecord =function(Doctor,Patient,Description,Prescription)
 {
 	const newRecord = {
-		amount : amount,
-		sender : sender,
-		recipient : recipient,
+		doctor : Doctor,
+		patient : Patient,
+		description : Description,
+		prescription : Prescription,
 		RecordId : uuidv4().split("-").join("")
 	}
 
@@ -55,7 +56,7 @@ blockchain.prototype.createNewRecord =function(amount,sender,recipient)
 }
 
 
-blockchain.prototype.addRecordToPendingRecord = function(RecordObj)
+blockchain.prototype.addRecordToPendingRecords = function(RecordObj)
 {
 	this.pendingRecords.push(RecordObj);
 	return this.getLastBlock()['index']+1;
@@ -72,7 +73,7 @@ blockchain.prototype.hashBlock = function(previousBlockHash, currBlockData ,nonc
 
 blockchain.prototype.proofOfWork = function(previousBlockHash, currBlockData)
 {
-	/* This method will do a work till it gets first 4 character as 0000.
+	/* This method will do a work till it gets first 4 character as 0000 in hash.
 	*/
 	let nonce = 0;
 	let hash = this.hashBlock(previousBlockHash, currBlockData, nonce);
@@ -106,7 +107,7 @@ blockchain.prototype.chainIsValid = function(blockchain)
 	const correctPreviousBlockHash = genesisBlock['previousBlockHash'] === '0';
 	const correctNonce = genesisBlock['nonce'] === 100;
 	const correctHash = genesisBlock['hash'] === '0';
-	const correctRecord = genesisBlock['Records'].length === 0;
+	const correctRecord = genesisBlock['records'].length === 0;
 
 	if(!correctRecord || !correctHash || !correctNonce || !correctPreviousBlockHash){
 		console.log(genesisBlock);
@@ -117,7 +118,7 @@ blockchain.prototype.chainIsValid = function(blockchain)
 	return validChain;
 }
 
-//searches through entire blockchain to search block for giver blockhash
+//searches through entire blockchain to search block for given blockhash
 blockchain.prototype.getBlock=function(blockHash){
 	let correctBlock = null;
 	this.chain.forEach(block=>{
@@ -135,7 +136,7 @@ blockchain.prototype.getRecord=function(RecordId){
 	let correctBlock = null;
 	let correctRecord = null;
 	this.chain.forEach(block=>{
-		block.Records.forEach(Record=>{
+		block.records.forEach(Record=>{
 			if(Record.RecordId === RecordId)
 			{
 				correctBlock = block;
@@ -149,29 +150,29 @@ blockchain.prototype.getRecord=function(RecordId){
 	};
 };
 
-//this will collect all Records done by given address and also calculate balance of that address
-blockchain.prototype.getAddressData = function(address){
-	const addressRecords =[];
-	this.chain.forEach(block =>{
-		block.Records.forEach(Record =>{
-			if(Record.sender === address || Record.recipient === address)
-				addressRecords.push(Record);
-		});
-	});
+// //this will collect all Records issued by given address and also calculate balance of that address
+// blockchain.prototype.getAddressData = function(address){
+// 	const addressRecords =[];
+// 	this.chain.forEach(block =>{
+// 		block.Records.forEach(Record =>{
+// 			if(Record.sender === address || Record.recipient === address)
+// 				addressRecords.push(Record);
+// 		});
+// 	});
 
-	let balance = 0;
-	addressRecords.forEach(Record=>{
-		if(address === Record.sender)
-			balance -= Record.amount;
-		else if(address === Record.recipient)
-			balance += Record.amount;
-	});
+// 	let balance = 0;
+// 	addressRecords.forEach(Record=>{
+// 		if(address === Record.sender)
+// 			balance -= Record.amount;
+// 		else if(address === Record.recipient)
+// 			balance += Record.amount;
+// 	});
 
-	return{
-		addressRecords : addressRecords,
-		addressBalance : balance
-	};
-}
+// 	return{
+// 		addressRecords : addressRecords,
+// 		addressBalance : balance
+// 	};
+// }
 
 
 module.exports = blockchain;

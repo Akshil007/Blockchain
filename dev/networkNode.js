@@ -14,28 +14,28 @@ const port = process.argv[2];
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended : false }));
 
-const bitCoin = new blockchain();
+const medicalRecord = new blockchain();
 
 app.get('/blockchain', function (req, res){
 
-	res.send(bitCoin);
+	res.send(medicalRecord);
 }); 
 
 
 
 
-//this end point is used for creating new transaction and broadcasting them to other nodes.
-app.post('/transaction/broadcast',function(req,res){
-	let newTransaction = bitCoin.createNewTransaction(req.body.amount , req.body.sender , req.body.recipient);
-	bitCoin.addTransactionToPendingTransaction(newTransaction);
+//this end point is used for creating new Record and broadcasting them to other nodes.
+app.post('/record/broadcast',function(req,res){
+	let newRecord = medicalRecord.createNewRecord(req.body.doctor , req.body.patient , req.body.description , req.body.prescription);
+	medicalRecord.addRecordToPendingRecords(newRecord);
 
 
 	let requestPromises=[];
-	bitCoin.networkNodes.forEach(networkNodeUrl => {
+	medicalRecord.networkNodes.forEach(networkNodeUrl => {
 		const requestOptions = {
-			uri: networkNodeUrl + '/transaction',
+			uri: networkNodeUrl + '/record',
 			method: 'POST',
-			body: newTransaction,
+			body: newRecord,
 			json: true
 		};
 		requestPromises.push(rp(requestOptions));
@@ -44,52 +44,55 @@ app.post('/transaction/broadcast',function(req,res){
 
 	Promise.all(requestPromises)
 	.then(data=>{
-		res.json({'Note':'Transaction created and broadcasted successfully'});
+		res.json({'Note':'Record created and broadcasted successfully'});
 	});
 
 });
 
 
-//this end point is used for registering new transaction broadcasted by above end point.
+//this end point is used for registering new Record broadcasted by above end point.
 //(used by all nodes other then the broadcasting point)
 //the above both end points is implemented to ensure that all nodes contains same blockchain
-app.post('/transaction', function (req, res){
+app.post('/record', function (req, res){
 	
-	let newTransaction = req.body;
-	let blockIndex = bitCoin.addTransactionToPendingTransaction(newTransaction);
-	res.json({"note": `thi block will added at index ${blockIndex}`});
+	let newRecord = req.body;
+	let blockIndex = medicalRecord.addRecordToPendingRecords(newRecord);
+	res.json({"note": `this block will added at index ${blockIndex}`});
 
 });
+
+
 
 /*
 	This end points does series of task.
 	1) It mines new block using proof-of-concept.
 	2) Once the block is mined , it distributes new block to other nodes
-	3) then it creats new reward transaction for miner and distribute it over the network to reside in
-	pending transaction. 
+	3) then it creats new reward Record for miner and distribute it over the network to reside in
+	pending Record.(This is not true for medical record) 
+
 
 */
 
 app.get('/mine', function (req, res){	
 
-	const lastBlock = bitCoin.getLastBlock();
+	const lastBlock = medicalRecord.getLastBlock();
 	const previousBlockHash = lastBlock['hash'];
 
 	const currBlockData = {
-		transactions : bitCoin.pendingTransactions,
+		records : medicalRecord.pendingRecords,
 		index : lastBlock['index'] + 1
 	};
-	const nonce = bitCoin.proofOfWork(previousBlockHash , currBlockData);
-	const hash = bitCoin.hashBlock(previousBlockHash , currBlockData ,nonce);
+	const nonce = medicalRecord.proofOfWork(previousBlockHash , currBlockData);
+	const hash = medicalRecord.hashBlock(previousBlockHash , currBlockData ,nonce);
 
-	bitCoin.createNewTransaction(6.25, "00" ,nodeAddress);
+	//medicalRecord.createNewRecord(6.25, "00" ,nodeAddress);
 	//console.log(nodeAddress);
 
-	const block = bitCoin.createNewBlock(nonce, previousBlockHash ,hash);
+	const block = medicalRecord.createNewBlock(nonce, previousBlockHash ,hash);
 
 	const requestPromises=[];
 
-	bitCoin.networkNodes.forEach( networkNodeUrl => {
+	medicalRecord.networkNodes.forEach( networkNodeUrl => {
 		const requestOptions={
 			uri: networkNodeUrl + "/receive-new-block",
 			method: "POST",
@@ -100,19 +103,19 @@ app.get('/mine', function (req, res){
 	})
 
 	Promise.all(requestPromises)
-	.then(data =>{
-		const requestOptions = {
-			uri : bitCoin.currNodeUrl + "/transaction/broadcast",
-			method:"POST",
-			body:{
-				"amount" : 6.25,
-				"sender" : "00",
-				"recipient" : nodeAddress
-			},
-			json: true
-		};
-		return rp(requestOptions);
-	})
+	// .then(data =>{
+	// 	const requestOptions = {
+	// 		uri : medicalRecord.currNodeUrl + "/Record/broadcast",
+	// 		method:"POST",
+	// 		body:{
+	// 			"amount" : 6.25,
+	// 			"sender" : "00",
+	// 			"recipient" : nodeAddress
+	// 		},
+	// 		json: true
+	// 	};
+	// 	return rp(requestOptions);
+	// })
 	.then(data =>{
 		res.json({
 		"note" :"new block mined and broadcasted successfully",
@@ -127,14 +130,14 @@ app.get('/mine', function (req, res){
 //into blockchain of that node 
 app.post('/receive-new-block',function(req,res){
 	const newBlock = req.body.newBlock;
-	const lastBlock = bitCoin.getLastBlock();
+	const lastBlock = medicalRecord.getLastBlock();
 	const correctHash = newBlock.previousBlockHash === lastBlock.hash;
 	const correctIndex = newBlock['index'] === lastBlock['index'] + 1;
 
 	if(correctIndex && correctHash)
 	{
-		bitCoin.chain.push(newBlock);
-		bitCoin.pendingTransactions = [];
+		medicalRecord.chain.push(newBlock);
+		medicalRecord.pendingRecords = [];
 		res.json({
 			note:"new Block received and added successfully",
 			block: newBlock
@@ -169,16 +172,18 @@ app.post('/register-and-broadcast-node',function(req,res){
 	
 	//register new node with the currnode
 	/*
-		if(bitCoin.currNodeUrl == null)
-			bitCoin.currNodeUrl = newNodeUrl
+		if(medicalRecord.currNodeUrl == null)
+			medicalRecord.currNodeUrl = newNodeUrl
 	*/
-	if(bitCoin.currNodeUrl!==newNodeUrl && bitCoin.networkNodes.indexOf(newNodeUrl) == -1)bitCoin.networkNodes.push(newNodeUrl);
+	//if its not a current node and not in the listed network nodes then register newNode into 
+	//network nodes list
+	if(medicalRecord.currNodeUrl!==newNodeUrl && medicalRecord.networkNodes.indexOf(newNodeUrl) == -1)medicalRecord.networkNodes.push(newNodeUrl);
 
 
 	//next step is to broadscast new node. pushing all requests in promises array
 	//here we are sending multiple requests. 
 	const reqNodePromises = [];
-	bitCoin.networkNodes.forEach(networkNodeUrl => {
+	medicalRecord.networkNodes.forEach(networkNodeUrl => {
 		const reqOptions={
 			uri: networkNodeUrl + '/register-node',
 			method: 'POST',
@@ -197,7 +202,7 @@ app.post('/register-and-broadcast-node',function(req,res){
 		const bulkRegisterOptions = {
 			uri: newNodeUrl + '/register-node-bulk',
 			method: 'POST',
-			body: { allNetworkNodes: [ ...bitCoin.networkNodes, bitCoin.currNodeUrl] },
+			body: { allNetworkNodes: [ ...medicalRecord.networkNodes, medicalRecord.currNodeUrl] },
 			// ... is for spreading array elements int array without that it would be array inside array
 			json:true
 		}
@@ -213,9 +218,9 @@ app.post('/register-and-broadcast-node',function(req,res){
 //register a node with the network (used by all other nodes except the original node to only register a new node)
 app.post('/register-node',function(req,res){
 	const newNodeUrl = req.body.newNodeUrl;
-	const nodeNotAlreadyPresent = bitCoin.networkNodes.indexOf(newNodeUrl) == -1;
-	const notCurrentNode = bitCoin.currNodeUrl !== newNodeUrl; 
-	if(nodeNotAlreadyPresent && notCurrentNode) bitCoin.networkNodes.push(newNodeUrl);
+	const nodeNotAlreadyPresent = medicalRecord.networkNodes.indexOf(newNodeUrl) == -1;
+	const notCurrentNode = medicalRecord.currNodeUrl !== newNodeUrl; 
+	if(nodeNotAlreadyPresent && notCurrentNode) medicalRecord.networkNodes.push(newNodeUrl);
 	res.json({'note':"newNode successfully registered"});
 
 });
@@ -226,110 +231,110 @@ app.post('/register-node',function(req,res){
 app.post('/register-node-bulk',function(req,res){
 	const allNetworkNodes = req.body.allNetworkNodes;
 	allNetworkNodes.forEach(networkNodeUrl=>{
-		const nodeNotAlreadyPresent = bitCoin.networkNodes.indexOf(networkNodeUrl) == -1;
-		const notCurrentNode = bitCoin.currNodeUrl !== networkNodeUrl;
-		if( nodeNotAlreadyPresent && notCurrentNode ) bitCoin.networkNodes.push(networkNodeUrl); 
+		const nodeNotAlreadyPresent = medicalRecord.networkNodes.indexOf(networkNodeUrl) == -1;
+		const notCurrentNode = medicalRecord.currNodeUrl !== networkNodeUrl;
+		if( nodeNotAlreadyPresent && notCurrentNode ) medicalRecord.networkNodes.push(networkNodeUrl); 
 	});
 	res.json({"note":"Bulk registration successfull."});
 });
 
 
-//implements longest chain rule (considers longest chain as a valid chain)
-app.get('/consensus',function(req,res){
-	const requestPromises = [];
-	bitCoin.networkNodes.forEach(networkNodeUrl=>{
-		const requestOptions ={
-			uri: networkNodeUrl + "/blockchain",
-			method: "GET",
-			json: true
-		};
+// //implements longest chain rule (considers longest chain as a valid chain)
+// app.get('/consensus',function(req,res){
+// 	const requestPromises = [];
+// 	medicalRecord.networkNodes.forEach(networkNodeUrl=>{
+// 		const requestOptions ={
+// 			uri: networkNodeUrl + "/blockchain",
+// 			method: "GET",
+// 			json: true
+// 		};
 
-		requestPromises.push(rp(requestOptions));
-	});
+// 		requestPromises.push(rp(requestOptions));
+// 	});
 
-	Promise.all(requestPromises)
-	.then( blockchains=> {
-		const currChainLength = bitCoin.chain.length;
-		let maxChainLength = currChainLength;
-		let newLongestChain = null;
-		let newPendingTransactions = null;
+// 	Promise.all(requestPromises)
+// 	.then( blockchains=> {
+// 		const currChainLength = medicalRecord.chain.length;
+// 		let maxChainLength = currChainLength;
+// 		let newLongestChain = null;
+// 		let newPendingRecords = null;
 
-		blockchains.forEach(blockchain=>{
-			if(blockchain.chain.length > maxChainLength)
-			{
-				maxChainLength = blockchain.chain.length;
-				newLongestChain = blockchain.chain;
-				newPendingTransactions = blockchain.pendingTransactions; 
-			}
-		});
+// 		blockchains.forEach(blockchain=>{
+// 			if(blockchain.chain.length > maxChainLength)
+// 			{
+// 				maxChainLength = blockchain.chain.length;
+// 				newLongestChain = blockchain.chain;
+// 				newPendingRecords = blockchain.pendingRecords; 
+// 			}
+// 		});
 
-		if( !newLongestChain || (newLongestChain && !bitCoin.chainIsValid(newLongestChain)))
-		{
-			res.json({
-				note:"Current chain has not been replaced",
-				chian: bitCoin.chain
-			});
-		}
-		else if( newLongestChain && bitCoin.chainIsValid(newLongestChain))
-		{
-			bitCoin.chain = newLongestChain;
-			bitCoin.pendingTransactions = newPendingTransactions;
-			res.json({
-				note:"Current chain has been replaced",
-				chian: bitCoin.chain
-			});
+// 		if( !newLongestChain || (newLongestChain && !medicalRecord.chainIsValid(newLongestChain)))
+// 		{
+// 			res.json({
+// 				note:"Current chain has not been replaced",
+// 				chian: medicalRecord.chain
+// 			});
+// 		}
+// 		else if( newLongestChain && medicalRecord.chainIsValid(newLongestChain))
+// 		{
+// 			medicalRecord.chain = newLongestChain;
+// 			medicalRecord.pendingRecords = newPendingRecords;
+// 			res.json({
+// 				note:"Current chain has been replaced",
+// 				chian: medicalRecord.chain
+// 			});
 
-		}
-	})
-});
+// 		}
+// 	})
+// });
 
 
 
-//this will return block for perticular block hash
-app.get('/block/:blockhash', function(req,res){
-	let blockHash = req.params.blockhash; 
-	/*
-		: will assign value given in url to blockhash variable
-		 and we can use them using "req.params".
-		 like: localhost:3001/block/24j2g34j23gjh4234dfsf
-		 blockhash = 24j2g34j23gjh4234dfsf
-	*/
-	const correctBlock = bitCoin.getBlock(blockHash);
-	res.json({
-		block: correctBlock
-	});
+// //this will return block for perticular block hash
+// app.get('/block/:blockhash', function(req,res){
+// 	let blockHash = req.params.blockhash; 
+// 	/*
+// 		: will assign value given in url to blockhash variable
+// 		 and we can use them using "req.params".
+// 		 like: localhost:3001/block/24j2g34j23gjh4234dfsf
+// 		 blockhash = 24j2g34j23gjh4234dfsf
+// 	*/
+// 	const correctBlock = medicalRecord.getBlock(blockHash);
+// 	res.json({
+// 		block: correctBlock
+// 	});
 	
 
 
-});
+// });
 
 
 
-//this will return transaction for transactionId
-app.get('/transaction/:transactionId', function(req,res){
+// //this will return Record for RecordId
+// app.get('/Record/:RecordId', function(req,res){
 
-	const transactionId = req.params.transactionId;
-	const transactionData = bitCoin.getTransaction(transactionId);
-	res.json({
-		Transaction: transactionData.transaction,
-		block: transactionData.block
-	});
-});
-
-
-//this will return all the transaction and curr balance of this address
-app.get('/address/:address', function(req,res){
-	const address = req.params.address;
-	const addressData = bitCoin.getAddressData(address);
-	res.json({
-		addressData : addressData
-	});
-});
+// 	const RecordId = req.params.RecordId;
+// 	const RecordData = medicalRecord.getRecord(RecordId);
+// 	res.json({
+// 		Record: RecordData.Record,
+// 		block: RecordData.block
+// 	});
+// });
 
 
-app.get('/block-explorer/index.html', function(req,res){
-	res.sendFile('./block-explorer/index.html',{root: __dirname});
-});
+// //this will return all the Record and curr balance of this address
+// app.get('/address/:address', function(req,res){
+// 	const address = req.params.address;
+// 	const addressData = medicalRecord.getAddressData(address);
+// 	res.json({
+// 		addressData : addressData
+// 	});
+// });
+
+
+// app.get('/block-explorer/index.html', function(req,res){
+// 	res.sendFile('./block-explorer/index.html',{root: __dirname});
+// });
 
 
 app.listen(port, function(){
