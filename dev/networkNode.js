@@ -128,6 +128,10 @@ app.get('/mine', function (req, res){
 
 //this end point receives requests from mine end point to add new valid block
 //into blockchain of that node 
+/*this end receive new blocks broadcasted by some node and append it only if it
+ satisfy certains cond.
+ 1) curr node's previous hash should match with previous node's hash
+ 2) its index should be alinged with the chain*/
 app.post('/receive-new-block',function(req,res){
 	const newBlock = req.body.newBlock;
 	const lastBlock = medicalRecord.getLastBlock();
@@ -239,102 +243,114 @@ app.post('/register-node-bulk',function(req,res){
 });
 
 
-// //implements longest chain rule (considers longest chain as a valid chain)
-// app.get('/consensus',function(req,res){
-// 	const requestPromises = [];
-// 	medicalRecord.networkNodes.forEach(networkNodeUrl=>{
-// 		const requestOptions ={
-// 			uri: networkNodeUrl + "/blockchain",
-// 			method: "GET",
-// 			json: true
-// 		};
+//implements longest chain rule (considers longest chain as a valid chain)
+app.get('/consensus',function(req,res){
+	/*here we are getting blockchians of all nodes (I know it must be same but the motive of this
+	endpoint is to check integrity of chain only.)*/
+	const requestPromises = [];
+	medicalRecord.networkNodes.forEach(networkNodeUrl=>{
+		const requestOptions ={
+			uri: networkNodeUrl + "/blockchain",
+			method: "GET",
+			json: true
+		};
 
-// 		requestPromises.push(rp(requestOptions));
-// 	});
+		requestPromises.push(rp(requestOptions));
+	});
 
-// 	Promise.all(requestPromises)
-// 	.then( blockchains=> {
-// 		const currChainLength = medicalRecord.chain.length;
-// 		let maxChainLength = currChainLength;
-// 		let newLongestChain = null;
-// 		let newPendingRecords = null;
+	/*Here We are going through all the blockchains that we obtained above and keeping track of 
+	longest valid blockchain. If found then updating the current blockchain with the longest valid
+	blockchain.*/
+	Promise.all(requestPromises)
+	.then( blockchains=> {
+		const currChainLength = medicalRecord.chain.length;
+		let maxChainLength = currChainLength;
+		let newLongestChain = null;
+		let newPendingRecords = null;
 
-// 		blockchains.forEach(blockchain=>{
-// 			if(blockchain.chain.length > maxChainLength)
-// 			{
-// 				maxChainLength = blockchain.chain.length;
-// 				newLongestChain = blockchain.chain;
-// 				newPendingRecords = blockchain.pendingRecords; 
-// 			}
-// 		});
+		blockchains.forEach(blockchain=>{
+			if(blockchain.chain.length > maxChainLength)
+			{
+				maxChainLength = blockchain.chain.length;
+				newLongestChain = blockchain.chain;
+				newPendingRecords = blockchain.pendingRecords; 
+			}
+		});
 
-// 		if( !newLongestChain || (newLongestChain && !medicalRecord.chainIsValid(newLongestChain)))
-// 		{
-// 			res.json({
-// 				note:"Current chain has not been replaced",
-// 				chian: medicalRecord.chain
-// 			});
-// 		}
-// 		else if( newLongestChain && medicalRecord.chainIsValid(newLongestChain))
-// 		{
-// 			medicalRecord.chain = newLongestChain;
-// 			medicalRecord.pendingRecords = newPendingRecords;
-// 			res.json({
-// 				note:"Current chain has been replaced",
-// 				chian: medicalRecord.chain
-// 			});
+		/* If new longest chain is mot found OR if found but not valid then dont update the current node
+		chain*/
+		if( !newLongestChain || (newLongestChain && !medicalRecord.chainIsValid(newLongestChain)))
+		{
+			res.json({
+				note:"Current chain has not been replaced",
+				chian: medicalRecord.chain
+			});
+		}
+		/* else If new longest chain is found and is also valid then update it.*/
+		else if( newLongestChain && medicalRecord.chainIsValid(newLongestChain))
+		{
+			medicalRecord.chain = newLongestChain;
+			medicalRecord.pendingRecords = newPendingRecords;
+			res.json({
+				note:"Current chain has been replaced",
+				chian: medicalRecord.chain
+			});
 
-// 		}
-// 	})
-// });
+		}
+	})
+});
 
 
 
-// //this will return block for perticular block hash
-// app.get('/block/:blockhash', function(req,res){
-// 	let blockHash = req.params.blockhash; 
-// 	/*
-// 		: will assign value given in url to blockhash variable
-// 		 and we can use them using "req.params".
-// 		 like: localhost:3001/block/24j2g34j23gjh4234dfsf
-// 		 blockhash = 24j2g34j23gjh4234dfsf
-// 	*/
-// 	const correctBlock = medicalRecord.getBlock(blockHash);
-// 	res.json({
-// 		block: correctBlock
-// 	});
+//this will return block for perticular block hash
+app.get('/block/:blockhash', function(req,res){
+	let blockHash = req.params.blockhash; 
+	/*
+		: will assign value given in url to blockhash variable
+		 and we can use them using "req.params".
+		 like: localhost:3001/block/24j2g34j23gjh4234dfsf
+		 blockhash = 24j2g34j23gjh4234dfsf
+	*/
+	const correctBlock = medicalRecord.getBlock(blockHash);
+	res.json({
+		block: correctBlock
+	});
 	
 
 
-// });
+});
+
+app.get('/test/validChain',function(req,res){
+	console.log("reached");
+	res.json({ result: medicalRecord.chainIsValid(medicalRecord.chain)}); 
+});
 
 
+//this will return Record for RecordId
+app.get('/Record/:RecordId', function(req,res){
 
-// //this will return Record for RecordId
-// app.get('/Record/:RecordId', function(req,res){
-
-// 	const RecordId = req.params.RecordId;
-// 	const RecordData = medicalRecord.getRecord(RecordId);
-// 	res.json({
-// 		Record: RecordData.Record,
-// 		block: RecordData.block
-// 	});
-// });
-
-
-// //this will return all the Record and curr balance of this address
-// app.get('/address/:address', function(req,res){
-// 	const address = req.params.address;
-// 	const addressData = medicalRecord.getAddressData(address);
-// 	res.json({
-// 		addressData : addressData
-// 	});
-// });
+	const RecordId = req.params.RecordId;
+	const RecordData = medicalRecord.getRecord(RecordId);
+	res.json({
+		Record: RecordData.Record,
+		block: RecordData.block
+	});
+});
 
 
-// app.get('/block-explorer/index.html', function(req,res){
-// 	res.sendFile('./block-explorer/index.html',{root: __dirname});
-// });
+//this will return all the Record and curr balance of this address
+app.get('/address/:address', function(req,res){
+	const address = req.params.address;
+	const addressData = medicalRecord.getAddressData(address);
+	res.json({
+		addressData : addressData
+	});
+});
+
+
+app.get('/block-explorer/index.html', function(req,res){
+	res.sendFile('./block-explorer/index.html',{root: __dirname});
+});
 
 
 app.listen(port, function(){
