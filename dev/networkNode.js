@@ -306,7 +306,7 @@ app.get('/consensus',function(req,res){
 app.get('/block/:blockhash', function(req,res){
 	let blockHash = req.params.blockhash; 
 	/*
-		: will assign value given in url to blockhash variable
+		':' will assign value given in url to blockhash variable
 		 and we can use them using "req.params".
 		 like: localhost:3001/block/24j2g34j23gjh4234dfsf
 		 blockhash = 24j2g34j23gjh4234dfsf
@@ -327,9 +327,9 @@ app.get('/test/validChain',function(req,res){
 
 
 //this will return Record for RecordId
-app.get('/Record/:RecordId', function(req,res){
+app.get('/record/:recordId', function(req,res){
 
-	const RecordId = req.params.RecordId;
+	const RecordId = req.params.recordId;
 	const RecordData = medicalRecord.getRecord(RecordId);
 	res.json({
 		Record: RecordData.Record,
@@ -338,12 +338,12 @@ app.get('/Record/:RecordId', function(req,res){
 });
 
 
-//this will return all the Record and curr balance of this address
-app.get('/address/:address', function(req,res){
-	const address = req.params.address;
-	const addressData = medicalRecord.getAddressData(address);
+//this will return all medical history of patient by given patient id or doctor id
+app.get('/get-history/id/:id', function(req,res){
+	const id = req.params.id;
+	const historyData = medicalRecord.getAddressData(id);
 	res.json({
-		addressData : addressData
+		medicalHistory : historyData
 	});
 });
 

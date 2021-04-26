@@ -169,29 +169,22 @@ blockchain.prototype.getRecord=function(RecordId){
 	};
 };
 
-// //this will collect all Records issued by given address and also calculate balance of that address
-// blockchain.prototype.getAddressData = function(address){
-// 	const addressRecords =[];
-// 	this.chain.forEach(block =>{
-// 		block.Records.forEach(Record =>{
-// 			if(Record.sender === address || Record.recipient === address)
-// 				addressRecords.push(Record);
-// 		});
-// 	});
+/*
+this will return medical history of given patient id or doctor id
+*/
+blockchain.prototype.getAddressData = function(id){
+	const historyRecords =[];
+	this.chain.forEach(block =>{
+		block.records.forEach(Record =>{
+			if(Record.patient.id === id || Record.doctor.id === id)
+				historyRecords.push(Record);
+		});
+	});
 
-// 	let balance = 0;
-// 	addressRecords.forEach(Record=>{
-// 		if(address === Record.sender)
-// 			balance -= Record.amount;
-// 		else if(address === Record.recipient)
-// 			balance += Record.amount;
-// 	});
-
-// 	return{
-// 		addressRecords : addressRecords,
-// 		addressBalance : balance
-// 	};
-// }
+	return{
+		Records : historyRecords,
+	};
+}
 
 
 module.exports = blockchain;
