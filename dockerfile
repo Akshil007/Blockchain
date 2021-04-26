@@ -1,5 +1,5 @@
 FROM node:latest
 WORKDIR ./app
 ADD . .
-RUN npm install
-RUN npm run node_1	
+CMD npm install
+CMD npm run node_1	
