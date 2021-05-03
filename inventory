@@ -1,4 +1,2 @@
 localhost ansible_user=akshil
 
-[alay]
-192.168.1.36 ansible_user=alay

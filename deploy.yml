@@ -6,4 +6,4 @@
       docker_image:
         name: akshil007/blockchain_pipeline_testing
         source: pull
-    - name: Run as container
+    # - name: Run as container
