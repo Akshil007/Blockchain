@@ -1,0 +1,9 @@
+---
+- name: Pull and Run docker image
+  hosts: all
+  tasks:
+    - name: Pull image
+      docker_image:
+        name: akshil007/blockchain_pipeline_testing
+        source: pull
+    - name: Run as container
