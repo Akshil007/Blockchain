@@ -365,6 +365,36 @@ app.get('/block-explorer/index.html', function(req,res){
 	res.sendFile('./block-explorer/index.html',{root: __dirname});
 });
 
+//retrives all networknodes url
+app.get('/get-all-networknodes',function(req,res){
+	const addresses = medicalRecord.networkNodes;
+	res.json({
+		nodesAddress:[...addresses,medicalRecord.currNodeUrl]
+	});
+});
+
+/*when any new node wants to join blockchain network it will access handshake endpoint with nodeurl as 
+one of the known url of blockchain network which is known by public dns service.
+*/
+app.post('/handshake',function(req,res){
+	const url = req.body.nodeUrl;
+
+	const reqOptions = {
+		uri: url+ "/register-and-broadcast-node",
+		method: "POST",
+		body: { 'newNodeUrl' : medicalRecord.currNodeUrl},
+		json: true
+
+	};
+
+	rp(reqOptions).then(data=>{
+				res.json({note:"node successfully registered and broadcasted in blockchain network"
+		});		
+	});
+
+	
+});
+
 
 app.listen(port, function(){
 	console.log(`listining to ${port} port...`);
