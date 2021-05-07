@@ -1,18 +1,17 @@
 //sha 256 for hashing
 const sha256=require('sha256'); 
 const {v4 : uuidv4} = require('uuid');
-
-const currNodeUrl = "http://"+process.argv[3]+":3001";
+const port = process.argv[2];
+const currNodeUrl = "http://"+process.argv[3]+":"+port;
 
 function blockchain()
 {
 	
 	this.chain=[];
-	this.pendingTransactions=[];
+	this.pendingRecords=[];
 	this.currNodeUrl=currNodeUrl;
 	console.log(this.currNodeUrl);
-	this.networkNodes = [];
-
+	this.networkNodes = [];//this array contains all nodes address except curr node's
 
 
 	//first block of blockchain is known as genesis block. it does not have previous hash
@@ -20,19 +19,21 @@ function blockchain()
 	this.createNewBlock(100,'0','0');
 }
 
+
+//this creates the new block and add it to cuur node's blockchain
 blockchain.prototype.createNewBlock=function(nonce, previousBlockHash, Hash){
 
 	const newBlock={
 		index : this.chain.length+1,
 		timeStamp : new Date(),//Date.now(), //The static Date.now() method returns the number of milliseconds elapsed since January 1, 1970
-		transactions : this.pendingTransactions,
+		records : this.pendingRecords,
 		nonce : nonce,
 		hash : Hash,
 		previousBlockHash : previousBlockHash,
 
 	};
 
-	this.pendingTransactions = [];
+	this.pendingRecords = [];
 	this.chain.push(newBlock);
 
 	return newBlock;
@@ -42,26 +43,30 @@ blockchain.prototype.getLastBlock=function(){
 	return this.chain[this.chain.length-1];
 }
 
-blockchain.prototype.createNewTransaction =function(amount,sender,recipient)
+blockchain.prototype.createNewRecord =function(Doctor,Patient,Description,Prescription)
 {
-	const newTransaction = {
-		amount : amount,
-		sender : sender,
-		recipient : recipient,
-		transactionId : uuidv4().split("-").join("")
+	const newRecord = {
+		doctor : Doctor,
+		patient : Patient,
+		description : Description,
+		prescription : Prescription,
+		RecordId : uuidv4().split("-").join("")
 	}
 
-	return newTransaction;
+	return newRecord;
 }
 
 
-blockchain.prototype.addTransactionToPendingTransaction = function(transactionObj)
+blockchain.prototype.addRecordToPendingRecords = function(RecordObj)
 {
-	this.pendingTransactions.push(transactionObj);
+	this.pendingRecords.push(RecordObj);
 	return this.getLastBlock()['index']+1;
 }
 
-
+/*From which data hash is calculate?
+1)previous block hash
+2)currBlockData (which includes)=> records + index 
+3)nonce*/
 blockchain.prototype.hashBlock = function(previousBlockHash, currBlockData ,nonce)
 {
 	const dataAsString = previousBlockHash + nonce.toString() + JSON.stringify(currBlockData);
@@ -69,10 +74,14 @@ blockchain.prototype.hashBlock = function(previousBlockHash, currBlockData ,nonc
 	return hash;
 }
 
-
+/*
+What is nonce?
+nonce is a number using which generated hash satisfy the hash requirements (like generated hash
+starting with 4 0s).
+*/
 blockchain.prototype.proofOfWork = function(previousBlockHash, currBlockData)
 {
-	/* This method will do a work till it gets first 4 character as 0000.
+	/* This method will do a work till it gets first 4 character as 0000 in hash.
 	*/
 	let nonce = 0;
 	let hash = this.hashBlock(previousBlockHash, currBlockData, nonce);
@@ -87,6 +96,16 @@ blockchain.prototype.proofOfWork = function(previousBlockHash, currBlockData)
 }
 
 //checks integrity of blockchain 
+/*
+How are we checking that a current chain is valid or not?
+First ,We are going through each and every block comparing curr block previos hash with privious block's
+hash and also comparing current block's hash with recalculated hash.
+
+In second phase we are checking genesis block which is our first block which has the specified 
+properties like its hash is 0 etc.
+
+If above both phase are correct then chain is valid otherwise its invalid.
+*/
 blockchain.prototype.chainIsValid = function(blockchain)
 {
 	let validChain = true;
@@ -95,7 +114,7 @@ blockchain.prototype.chainIsValid = function(blockchain)
 		const currBlock = blockchain[i];
 		const previousBlock = blockchain[i-1];
 		const isHashValid = currBlock['previousBlockHash'] === previousBlock['hash'];
-		const isDataVaid = currBlock['hash'] === this.hashBlock(previousBlock['hash'], { transactions: currBlock['transactions'], index: currBlock['index']}, currBlock['nonce']);
+		const isDataVaid = currBlock['hash'] === this.hashBlock(previousBlock['hash'], { records: currBlock['records'], index: currBlock['index']}, currBlock['nonce']);
 		if( !isDataVaid || !isHashValid){ 
 			console.log(blockchain[i]);
 			validChain=false
@@ -106,18 +125,19 @@ blockchain.prototype.chainIsValid = function(blockchain)
 	const correctPreviousBlockHash = genesisBlock['previousBlockHash'] === '0';
 	const correctNonce = genesisBlock['nonce'] === 100;
 	const correctHash = genesisBlock['hash'] === '0';
-	const correctTransaction = genesisBlock['transactions'].length === 0;
+	const correctRecord = genesisBlock['records'].length === 0;
 
-	if(!correctTransaction || !correctHash || !correctNonce || !correctPreviousBlockHash){
+	if(!correctRecord || !correctHash || !correctNonce || !correctPreviousBlockHash){
 		console.log(genesisBlock);
 		validChain = false;
 	}
 	
 
+	console.log(validChain);
 	return validChain;
 }
 
-//searches through entire blockchain to search block for giver blockhash
+//searches through entire blockchain to search block for given blockhash
 blockchain.prototype.getBlock=function(blockHash){
 	let correctBlock = null;
 	this.chain.forEach(block=>{
@@ -130,46 +150,39 @@ blockchain.prototype.getBlock=function(blockHash){
 };
 
 
-//searches entire blockchain for searching perticular transaction
-blockchain.prototype.getTransaction=function(transactionId){
+//searches entire blockchain for searching perticular Record
+blockchain.prototype.getRecord=function(RecordId){
 	let correctBlock = null;
-	let correctTransaction = null;
+	let correctRecord = null;
 	this.chain.forEach(block=>{
-		block.transactions.forEach(transaction=>{
-			if(transaction.transactionId === transactionId)
+		block.records.forEach(Record=>{
+			if(Record.RecordId === RecordId)
 			{
 				correctBlock = block;
-				correctTransaction = transaction;
+				correctRecord = Record;
 			}
 		});
 	});
 	return {
 		block : correctBlock,
-		transaction : correctTransaction
+		Record : correctRecord
 	};
 };
 
-//this will collect all transactions done by given address and also calculate balance of that address
-blockchain.prototype.getAddressData = function(address){
-	const addressTransactions =[];
+/*
+this will return medical history of given patient id or doctor id
+*/
+blockchain.prototype.getAddressData = function(id){
+	const historyRecords =[];
 	this.chain.forEach(block =>{
-		block.transactions.forEach(transaction =>{
-			if(transaction.sender === address || transaction.recipient === address)
-				addressTransactions.push(transaction);
+		block.records.forEach(Record =>{
+			if(Record.patient.id === id || Record.doctor.id === id)
+				historyRecords.push(Record);
 		});
 	});
 
-	let balance = 0;
-	addressTransactions.forEach(transaction=>{
-		if(address === transaction.sender)
-			balance -= transaction.amount;
-		else if(address === transaction.recipient)
-			balance += transaction.amount;
-	});
-
 	return{
-		addressTransactions : addressTransactions,
-		addressBalance : balance
+		Records : historyRecords,
 	};
 }
 
