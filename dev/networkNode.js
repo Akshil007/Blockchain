@@ -183,6 +183,8 @@ app.post('/register-and-broadcast-node',function(req,res){
 	//network nodes list
 	if(medicalRecord.currNodeUrl!==newNodeUrl && medicalRecord.networkNodes.indexOf(newNodeUrl) == -1)medicalRecord.networkNodes.push(newNodeUrl);
 
+	
+
 
 	//next step is to broadscast new node. pushing all requests in promises array
 	//here we are sending multiple requests. 
@@ -214,7 +216,18 @@ app.post('/register-and-broadcast-node',function(req,res){
 		return rp(bulkRegisterOptions);
 	})
 	.then(data =>{
-		res.json({'note': "new node registered with network successfully"});
+		//caling consensus algo so that if any new node comes in beetween even then it reaches to same 
+		//state as all other nodes in network
+			
+			const consensusReqOptions = {
+			uri: newNodeUrl + '/consensus',
+			method: 'GET',
+			json: true
+		};
+		return rp(consensusReqOptions);
+		
+	}).then(data=>{
+				res.json({'note': "new node registered with network successfully"});		
 	});
 
 });
