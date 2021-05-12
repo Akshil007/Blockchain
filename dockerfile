@@ -1,5 +1,5 @@
 FROM node:latest
-WORKDIR ./app
+WORKDIR ./blockchain
 ADD . .
 CMD npm install
 CMD npm run node_1	
