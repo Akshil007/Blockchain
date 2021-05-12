@@ -1,11 +1,31 @@
 ---
-- name: Pull and Run docker image
+- name: Pull and Run docker containers
   hosts: all
   tasks:
-    - name: Pull image
+    - name: Pull Spring WebApp image
       docker_image:
-        name: akshil007/blockchain_pipeline_testing
+        name: akshil007/webapp
         source: pull
-    # - name: docker
-    
-    # - name: Run as container
+
+
+
+    - name: Pull blockchain image
+      docker_image:
+        name: akshil007/blockchain_medical
+        source: pull
+
+
+
+    - name: Run WebApp container
+      docker:
+        name: WebApplication
+        image: akshil007/webapp
+        state: started
+
+
+
+    - name: Run blockchain container
+      docker:
+        name: blockchainNode
+        image: akshil007/blockchain_medical
+        state: started
