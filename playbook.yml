@@ -17,15 +17,16 @@
 
 
     - name: Run WebApp container
-      docker:
+      docker_container:
         name: WebApplication
         image: akshil007/webapp
         state: started
-
+        recreate: yes
 
 
     - name: Run blockchain container
-      docker:
+      docker_container:
         name: blockchainNode
         image: akshil007/blockchain_medical
         state: started
+        recreate: yes
