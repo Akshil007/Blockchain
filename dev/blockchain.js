@@ -176,7 +176,7 @@ blockchain.prototype.getAddressData = function(id){
 	const historyRecords =[];
 	this.chain.forEach(block =>{
 		block.records.forEach(Record =>{
-			if(Record.patient.id === id || Record.doctor.id === id)
+			if(Record.patient === id || Record.doctor === id)
 				historyRecords.push(Record);
 		});
 	});

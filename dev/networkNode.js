@@ -340,7 +340,7 @@ app.get('/test/validChain',function(req,res){
 
 
 //this will return Record for RecordId
-app.get('/record/:recordId', function(req,res){
+app.get('/record/id/:recordId', function(req,res){
 
 	const RecordId = req.params.recordId;
 	const RecordData = medicalRecord.getRecord(RecordId);
@@ -375,6 +375,10 @@ app.get('/get-all-networknodes',function(req,res){
 
 /*when any new node wants to join blockchain network it will access handshake endpoint with nodeurl as 
 one of the known url of blockchain network which is known by public dns service.
+
+Note: This endpoint will be called by new node and it will pass "node url" as a known url from 
+public dns service.
+
 */
 app.post('/handshake',function(req,res){
 	const url = req.body.nodeUrl;
