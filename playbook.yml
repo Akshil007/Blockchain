@@ -2,11 +2,49 @@
 - name: Pull and Run docker containers
   hosts: all
   tasks:
+
+    - name: Removing all existing containers
+        
+        - name: Remove mysql existing container
+          docker_container:
+            name: healthcare-db
+            state: absent
+
+        
+        - name: Remove Spring WebApp existing container
+          docker_container:
+            name: healthcare-webapp
+            state: absent
+
+
+        - name: Remove blockchain existing container
+          docker_container:
+            name: healthcare-blockchain
+            state: absent
+
+
+    - name: Docker pull mysql
+      docker_image:
+        name: mysql:8.0.23
+        source: pull
+
+
+    - name: Remove Previously Created Docker Network
+      docker_network:
+        name: health_net
+        state: absent
+        force: yes
+
+
+    - name: Create Docker New Network
+      docker_network:
+        name: health_net
+
+
     - name: Pull Spring WebApp image
       docker_image:
         name: akshil007/health_care_app
         source: pull
-
 
 
     - name: Pull blockchain image
@@ -15,18 +53,42 @@
         source: pull
 
 
-
-    - name: Run WebApp container
+    - name: Create MYSQL container
       docker_container:
-        name: WebApplication
+        name: healthcare-db
+        image: mysql:8.0.23
+        networks:
+          - name: "health_net"
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: HealthCareData
+        ports:
+          - "8090:3306"
+
+
+    - name: Create Web Application container
+      docker_container:
+        name: healthcare-webapp
         image: akshil007/health_care_app
-        state: started
-        recreate: yes
+        networks:
+          - name: "health_net"
+        env:
+          DATABASE_HOST: healthcare_host
+        ports:
+          - "8085:8083"
+
+
+    # - name: Run WebApp container
+    #   docker_container:
+    #     name: healthcare-webapp
+    #     image: akshil007/health_care_app
+    #     state: started
+    #     recreate: yes
 
 
     - name: Run blockchain container
       docker_container:
-        name: blockchainNode
+        name: healthcare-blockchain
         image: akshil007/blockchain_medical
         state: started
         recreate: yes
