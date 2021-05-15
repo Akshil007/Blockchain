@@ -65,8 +65,8 @@
         ports:
           - "8090:3306"
 
-    - name: Run command if /path/to/database does not exist (without 'args')
-      ansible.builtin.command: /usr/bin/make_database.sh db_user db_name creates=/path/to/database
+    # - name: Run command if /path/to/database does not exist (without 'args')
+    #   ansible.builtin.command: /usr/bin/make_database.sh db_user db_name creates=/path/to/database
 
     - name: Create Web Application container
       docker_container:
