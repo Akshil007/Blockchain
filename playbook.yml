@@ -17,6 +17,11 @@
         name: healthcare-blockchain
         state: absent
 
+    # - name: Remove image
+    #   docker_image:
+    #     state: absent
+    #     name: registry.ansible.com/chouseknecht/sinatra
+    #     tag: v1
 
     - name: Docker pull mysql
       docker_image:
