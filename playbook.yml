@@ -2,25 +2,20 @@
 - name: Pull and Run docker containers
   hosts: all
   tasks:
+    - name: Remove mysql existing container
+      docker_container:
+        name: healthcare-db
+        state: absent
 
-    - name: Removing all existing containers
-      tasks:
-        - name: Remove mysql existing container
-          docker_container:
-            name: healthcare-db
-            state: absent
+    - name: Remove Spring WebApp existing container
+      docker_container:
+        name: healthcare-webapp
+        state: absent
 
-        
-        - name: Remove Spring WebApp existing container
-          docker_container:
-            name: healthcare-webapp
-            state: absent
-
-
-        - name: Remove blockchain existing container
-          docker_container:
-            name: healthcare-blockchain
-            state: absent
+    - name: Remove blockchain existing container
+      docker_container:
+        name: healthcare-blockchain
+        state: absent
 
 
     - name: Docker pull mysql
