@@ -1,0 +1,1 @@
+docker exec -it healthcare-db mysql -u root -p HealthCareData < fire.sql

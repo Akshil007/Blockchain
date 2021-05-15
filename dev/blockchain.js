@@ -165,7 +165,8 @@ blockchain.prototype.getRecord=function(RecordId){
 	});
 	return {
 		block : correctBlock,
-		Record : correctRecord
+		Record : correctRecord,
+		blockHash : correctBlock.hash
 	};
 };
 

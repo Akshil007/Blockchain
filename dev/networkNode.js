@@ -346,7 +346,7 @@ app.get('/record/id/:recordId', function(req,res){
 	const RecordData = medicalRecord.getRecord(RecordId);
 	res.json({
 		Record: RecordData.Record,
-		//block: RecordData.block
+		blockHash: RecordData.blockHash
 	});
 });
 
