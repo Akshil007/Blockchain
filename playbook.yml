@@ -4,7 +4,7 @@
   tasks:
     - name: Pull Spring WebApp image
       docker_image:
-        name: akshil007/webapp
+        name: akshil007/HealthCareApp
         source: pull
 
 
@@ -19,7 +19,7 @@
     - name: Run WebApp container
       docker_container:
         name: WebApplication
-        image: akshil007/webapp
+        image: akshil007/HealthCareApp
         state: started
         recreate: yes
 
