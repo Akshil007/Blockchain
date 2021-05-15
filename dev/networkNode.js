@@ -361,10 +361,6 @@ app.get('/get-history/id/:id', function(req,res){
 });
 
 
-app.get('/block-explorer/index.html', function(req,res){
-	res.sendFile('./block-explorer/index.html',{root: __dirname});
-});
-
 //retrives all networknodes url
 app.get('/get-all-networknodes',function(req,res){
 	const addresses = medicalRecord.networkNodes;
