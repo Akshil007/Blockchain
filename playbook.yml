@@ -92,5 +92,7 @@
       docker_container:
         name: healthcare-blockchain
         image: akshil007/blockchain_medical
-        state: started
-        recreate: yes
+        networks:
+          - name: "health_net"
+        # state: started
+        # recreate: yes

@@ -1,4 +1,4 @@
-use HealthCareData
+use HealthCareData;
 
 create table user_details (
     user_id int NOT NULL AUTO_INCREMENT,
